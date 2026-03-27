@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { Plus, AlertCircle, Calendar, LayoutList, CalendarDays, Download, MessageCircle } from 'lucide-react'
+import { Plus, AlertCircle, Calendar, LayoutList, CalendarDays, Download, MessageCircle, IndianRupee } from 'lucide-react'
 import BookingModal from './BookingModal'
 import CalendarGrid from './CalendarGrid'
 
@@ -19,6 +19,18 @@ export default function BookingsDashboardClient({
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [viewBooking, setViewBooking] = useState<any | null>(null)
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
+  const [paymentAmount, setPaymentAmount] = useState('')
+  const [isRecordingPayment, setIsRecordingPayment] = useState(false)
+  const [showPaymentForm, setShowPaymentForm] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState('Cash')
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0])
+  const [paymentNotes, setPaymentNotes] = useState('')
+
+  const paymentStatusColors: any = {
+    unpaid: 'bg-red-100 text-red-800',
+    partial: 'bg-yellow-100 text-yellow-800',
+    paid: 'bg-green-100 text-green-800'
+  }
 
   const statusColors: any = {
     quote: 'bg-gray-100 text-gray-800',
@@ -47,6 +59,59 @@ export default function BookingsDashboardClient({
     setViewBooking(null)
   }
 
+  const handleRecordPaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const rawAmount = Number(paymentAmount)
+    if (!paymentAmount || isNaN(rawAmount) || rawAmount <= 0) return
+    setIsRecordingPayment(true)
+    
+    try {
+      const id = viewBooking.id
+      const booking = bookings.find(b => b.id === id)
+      if (!booking) return
+      
+      const supabase = createClient()
+      if (!error) {
+        // 1. Insert into relative payments table
+        const { data: newPayment, error: pError } = await supabase.from('payments').insert({
+          booking_id: id,
+          amount: rawAmount,
+          payment_method: paymentMethod,
+          payment_date: paymentDate,
+          notes: paymentNotes
+        }).select().single()
+
+        if (pError) throw pError
+
+        // 2. Assess cumulative mapping mathematically
+        const currentSum = (booking.payments || []).reduce((sum: number, p: any) => sum + Number(p.amount), 0)
+        const activeSum = currentSum + rawAmount
+        const newStatus = activeSum >= Number(booking.total_amount) ? 'paid' : 'partial'
+        
+        // 3. Update master tracking flag
+        await supabase.from('bookings').update({ payment_status: newStatus }).eq('id', id)
+
+        // 4. Evolve local arrays flawlessly to immediately populate history GUI
+        const updatedBooking = { 
+          ...booking, 
+          payment_status: newStatus, 
+          payments: [newPayment, ...(booking.payments || [])] 
+        }
+
+        setBookings(bookings.map(b => b.id === id ? updatedBooking : b))
+        setViewBooking(updatedBooking)
+        setShowPaymentForm(false)
+        setPaymentAmount('')
+        setPaymentNotes('')
+        setPaymentMethod('Cash')
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsRecordingPayment(false)
+    }
+  }
+
   const handleSaveBooking = (newBooking: any) => {
     setBookings([newBooking, ...bookings])
     setIsModalOpen(false)
@@ -60,9 +125,14 @@ export default function BookingsDashboardClient({
             <h2 className="text-2xl font-extrabold text-gray-900">{viewBooking.customer_name}</h2>
             <p className="text-gray-500 font-medium mt-1">{viewBooking.customer_phone}</p>
           </div>
-          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${statusColors[viewBooking.status]}`}>
-            {viewBooking.status}
-          </span>
+          <div className="flex gap-2 flex-col items-end">
+            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${statusColors[viewBooking.status]}`}>
+              {viewBooking.status}
+            </span>
+            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${paymentStatusColors[viewBooking.payment_status || 'unpaid']}`}>
+              {viewBooking.payment_status || 'unpaid'}
+            </span>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-8 bg-gray-50 p-4 rounded-xl text-sm font-medium">
@@ -86,10 +156,89 @@ export default function BookingsDashboardClient({
           ))}
         </ul>
 
-        <div className="flex justify-between items-center border-t pt-4 mb-8">
-          <span className="font-bold text-gray-500">Total Contract Value</span>
-          <span className="text-xl font-extrabold text-gray-900">₹{Number(viewBooking.total_amount).toLocaleString()}</span>
+        {(viewBooking.payments && viewBooking.payments.length > 0) && (
+          <div className="mb-6 border border-gray-100 rounded-xl overflow-hidden">
+            <h3 className="font-bold text-gray-900 bg-gray-50 px-4 py-3 border-b border-gray-100">Payment History</h3>
+            <ul className="divide-y divide-gray-100">
+              {viewBooking.payments.map((p: any) => (
+                <li key={p.id} className="p-4 flex justify-between items-center text-sm font-medium">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-900 font-bold">{p.payment_method}</span>
+                      <span className="text-gray-400 font-normal">{new Date(p.payment_date).toLocaleDateString()}</span>
+                    </div>
+                    {p.notes && <p className="text-gray-500 text-xs mt-1">{p.notes}</p>}
+                  </div>
+                  <span className="text-green-600 font-extrabold text-base">₹{Number(p.amount).toLocaleString()}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-3 border-t pt-4 mb-6">
+          <div className="flex justify-between items-center">
+            <span className="font-bold text-gray-500">Total Contract Value</span>
+            <span className="text-xl font-extrabold text-gray-900">₹{Number(viewBooking.total_amount).toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="font-bold text-gray-500">Amount Paid</span>
+            <span className="text-lg font-bold text-green-600">₹{Number(viewBooking.payments?.reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0).toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="font-bold text-gray-500">Outstanding Balance</span>
+            <span className="text-lg font-bold text-red-600">₹{Math.max(0, Number(viewBooking.total_amount) - Number(viewBooking.payments?.reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0)).toLocaleString()}</span>
+          </div>
         </div>
+
+        {viewBooking.payment_status !== 'paid' && (
+          <div className="bg-indigo-50 border border-indigo-100 p-5 rounded-xl mb-8">
+            {!showPaymentForm ? (
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-indigo-900">Need to record a manual receipt?</span>
+                <button onClick={() => setShowPaymentForm(true)} className="px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition">
+                  <IndianRupee size={16} className="inline mr-2 -mt-0.5" />
+                  Record Payment
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleRecordPaymentSubmit} className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                <h4 className="font-bold text-indigo-900 border-b border-indigo-100 pb-2">Log Collection Details</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-indigo-800 mb-1.5 uppercase tracking-wider">Amount (₹)</label>
+                    <input type="number" required value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} className="w-full bg-white border border-indigo-200 focus:border-indigo-500 rounded-lg px-4 py-2 outline-none text-black font-bold" min="1" max={Math.max(0, Number(viewBooking.total_amount) - Number(viewBooking.payments?.reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0))} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-indigo-800 mb-1.5 uppercase tracking-wider">Method</label>
+                    <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="w-full bg-white border border-indigo-200 focus:border-indigo-500 rounded-lg px-4 py-2 outline-none text-black font-bold">
+                      <option>Cash</option>
+                      <option>UPI</option>
+                      <option>NEFT</option>
+                      <option>Card</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-indigo-800 mb-1.5 uppercase tracking-wider">Receipt Date</label>
+                    <input type="date" required value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} className="w-full bg-white border border-indigo-200 focus:border-indigo-500 rounded-lg px-4 py-2 outline-none text-black font-medium" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-indigo-800 mb-1.5 uppercase tracking-wider">Admin Notes</label>
+                    <input type="text" value={paymentNotes} onChange={(e) => setPaymentNotes(e.target.value)} className="w-full bg-white border border-indigo-200 focus:border-indigo-500 rounded-lg px-4 py-2 outline-none text-black font-medium" placeholder="Optionally log UTR..." />
+                  </div>
+                </div>
+                <div className="flex gap-3 justify-end pt-2">
+                  <button type="button" onClick={() => setShowPaymentForm(false)} className="px-4 py-2 font-bold text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors">Cancel</button>
+                  <button type="submit" disabled={isRecordingPayment || !paymentAmount} className="px-5 py-2 font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-lg shadow-sm transition-colors">
+                    {isRecordingPayment ? 'Saving...' : 'Confirm Receipt'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
 
         <div className="flex gap-3 flex-wrap">
           <button onClick={() => setViewBooking(null)} className="px-4 py-2 font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">
@@ -120,7 +269,9 @@ export default function BookingsDashboardClient({
             <MessageCircle size={16} /> WhatsApp
           </a>
 
-          <button onClick={() => deleteBooking(viewBooking.id)} className="px-4 py-2 font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-sm">
+
+
+          <button onClick={() => deleteBooking(viewBooking.id)} className="px-4 py-2 font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-sm ml-auto">
             Delete 
           </button>
         </div>

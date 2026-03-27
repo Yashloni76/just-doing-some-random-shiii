@@ -17,6 +17,7 @@ export interface Database {
           owner_name: string
           gstin: string | null
           city: string
+          slug: string | null
           created_at: string
         }
         Insert: {
@@ -26,6 +27,7 @@ export interface Database {
           owner_name: string
           gstin?: string | null
           city: string
+          slug?: string | null
           created_at?: string
         }
         Update: {
@@ -35,6 +37,7 @@ export interface Database {
           owner_name?: string
           gstin?: string | null
           city?: string
+          slug?: string | null
           created_at?: string
         }
         Relationships: []
@@ -49,6 +52,7 @@ export interface Database {
           end_date: string
           status: string
           total_amount: number
+          payment_status: string
           notes: string | null
           created_at: string
         }
@@ -61,6 +65,7 @@ export interface Database {
           end_date: string
           status?: string
           total_amount?: number
+          payment_status?: string
           notes?: string | null
           created_at?: string
         }
@@ -73,10 +78,49 @@ export interface Database {
           end_date?: string
           status?: string
           total_amount?: number
+          payment_status?: string
           notes?: string | null
           created_at?: string
         }
         Relationships: []
+      }
+      payments: {
+        Row: {
+          id: string
+          booking_id: string
+          amount: number
+          payment_method: string
+          payment_date: string
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          booking_id: string
+          amount: number
+          payment_method: string
+          payment_date?: string
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          booking_id?: string
+          amount?: number
+          payment_method?: string
+          payment_date?: string
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       booking_items: {
         Row: {

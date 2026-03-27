@@ -15,7 +15,7 @@ export default async function BookingsPage() {
   try {
     const { data: bData, error: bError } = await supabase
       .from('bookings')
-      .select('*, booking_items(*, inventory_items(name, price_per_day))')
+      .select('*, booking_items(*, inventory_items(name, price_per_day)), payments(*)')
       .eq('business_id', DUMMY_BUSINESS_ID)
       .order('created_at', { ascending: false })
 
