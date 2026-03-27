@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Package, CalendarCheck } from 'lucide-react'
+import { Package, CalendarCheck, Settings } from 'lucide-react'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -17,6 +17,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Link href="/dashboard/bookings" className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 font-semibold hover:bg-blue-50 hover:text-blue-700 transition-colors">
             <CalendarCheck size={20} />
             Bookings
+          </Link>
+          <Link href="/dashboard/settings" className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 font-semibold hover:bg-blue-50 hover:text-blue-700 transition-colors">
+            <Settings size={20} />
+            Settings
           </Link>
         </nav>
       </aside>

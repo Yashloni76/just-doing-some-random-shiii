@@ -50,6 +50,25 @@ export default function BookingsDashboardClient({
     }
   }
 
+  const updateReturnQuantity = async (itemId: string, newQty: number) => {
+    const supabase = createClient()
+    const { error: err } = await supabase
+      .from('booking_items')
+      .update({ returned_quantity: newQty })
+      .eq('id', itemId)
+
+    if (!err) {
+      const updatedView = {
+        ...viewBooking,
+        booking_items: viewBooking.booking_items.map((bi: any) => 
+          bi.id === itemId ? { ...bi, returned_quantity: newQty } : bi
+        )
+      }
+      setViewBooking(updatedView)
+      setBookings(bookings.map(b => b.id === viewBooking.id ? updatedView : b))
+    }
+  }
+
   const deleteBooking = async (id: string) => {
     const supabase = createClient()
     if (!error) {
@@ -146,12 +165,44 @@ export default function BookingsDashboardClient({
           </div>
         </div>
 
-        <h3 className="font-bold text-gray-900 border-b pb-2 mb-4">Reserved Items</h3>
+        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex justify-between items-center mb-8">
+           <div>
+             <span className="text-blue-800 text-xs font-bold uppercase tracking-wider block mb-1">Security Deposit</span>
+             <span className="text-xl font-black text-blue-900 font-mono">₹{Number(viewBooking.security_deposit_amount || 0).toLocaleString()}</span>
+           </div>
+           <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+             viewBooking.security_deposit_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+           }`}>
+             Deposit {viewBooking.security_deposit_status}
+           </div>
+        </div>
+
+        <h3 className="font-bold text-gray-900 border-b pb-2 mb-4">Reserved Items & Returns</h3>
         <ul className="space-y-3 mb-8">
           {viewBooking.booking_items?.map((bi: any) => (
-            <li key={bi.id} className="flex justify-between items-center text-sm font-medium text-gray-700 bg-gray-50 p-3 rounded-lg">
-              <span>{bi.inventory_items?.name || 'Unknown Item'} <span className="text-gray-400">x {bi.quantity_booked}</span></span>
-              <span>₹{(bi.inventory_items?.price_per_day * bi.quantity_booked).toFixed(2)} / day</span>
+            <li key={bi.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center text-sm font-medium text-gray-700 bg-gray-50 p-4 rounded-xl border border-gray-100 gap-4">
+              <div className="flex flex-col">
+                <span className="font-bold text-gray-900">{bi.inventory_items?.name || 'Unknown Item'}</span>
+                <span className="text-gray-400 text-xs mt-0.5">₹{(bi.inventory_items?.price_per_day * bi.quantity_booked).toFixed(2)} / day</span>
+              </div>
+              
+              <div className="flex items-center gap-4 bg-white px-3 py-2 rounded-lg border border-gray-100">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-tighter">Status:</span>
+                <div className="flex items-center gap-2">
+                  <span className={`font-black ${bi.returned_quantity >= bi.quantity_booked ? 'text-green-600' : 'text-orange-600'}`}>
+                    {bi.returned_quantity || 0} / {bi.quantity_booked}
+                  </span>
+                  <span className="text-xs text-gray-400 font-bold uppercase">Returned</span>
+                </div>
+                {bi.returned_quantity < bi.quantity_booked && (
+                  <button 
+                    onClick={() => updateReturnQuantity(bi.id, (bi.returned_quantity || 0) + 1)}
+                    className="bg-blue-600 text-white w-6 h-6 rounded flex items-center justify-center hover:bg-blue-700 transition shadow-sm"
+                  >
+                    +
+                  </button>
+                )}
+              </div>
             </li>
           ))}
         </ul>

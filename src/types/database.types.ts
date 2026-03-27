@@ -18,6 +18,11 @@ export interface Database {
           gstin: string | null
           city: string
           slug: string | null
+          logo_url: string | null
+          business_address: string | null
+          business_email: string | null
+          whatsapp_number: string | null
+          terms_conditions: string | null
           created_at: string
         }
         Insert: {
@@ -28,6 +33,11 @@ export interface Database {
           gstin?: string | null
           city: string
           slug?: string | null
+          logo_url?: string | null
+          business_address?: string | null
+          business_email?: string | null
+          whatsapp_number?: string | null
+          terms_conditions?: string | null
           created_at?: string
         }
         Update: {
@@ -38,6 +48,11 @@ export interface Database {
           gstin?: string | null
           city?: string
           slug?: string | null
+          logo_url?: string | null
+          business_address?: string | null
+          business_email?: string | null
+          whatsapp_number?: string | null
+          terms_conditions?: string | null
           created_at?: string
         }
         Relationships: []
@@ -53,6 +68,8 @@ export interface Database {
           status: string
           total_amount: number
           payment_status: string
+          security_deposit_amount: number
+          security_deposit_status: string
           notes: string | null
           created_at: string
         }
@@ -66,6 +83,8 @@ export interface Database {
           status?: string
           total_amount?: number
           payment_status?: string
+          security_deposit_amount?: number
+          security_deposit_status?: string
           notes?: string | null
           created_at?: string
         }
@@ -79,6 +98,8 @@ export interface Database {
           status?: string
           total_amount?: number
           payment_status?: string
+          security_deposit_amount?: number
+          security_deposit_status?: string
           notes?: string | null
           created_at?: string
         }
@@ -128,18 +149,21 @@ export interface Database {
           booking_id: string
           inventory_item_id: string
           quantity_booked: number
+          returned_quantity: number
         }
         Insert: {
           id?: string
           booking_id: string
           inventory_item_id: string
           quantity_booked: number
+          returned_quantity?: number
         }
         Update: {
           id?: string
           booking_id?: string
           inventory_item_id?: string
           quantity_booked?: number
+          returned_quantity?: number
         }
         Relationships: [
           {
@@ -193,6 +217,51 @@ export interface Database {
           created_at?: string
         }
         Relationships: []
+      }
+      damages: {
+        Row: {
+          id: string
+          booking_id: string
+          item_id: string
+          description: string
+          repair_cost: number
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          booking_id: string
+          item_id: string
+          description: string
+          repair_cost?: number
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          booking_id?: string
+          item_id?: string
+          description?: string
+          repair_cost?: number
+          status?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "damages_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "damages_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {

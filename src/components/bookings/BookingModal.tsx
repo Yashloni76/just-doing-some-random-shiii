@@ -10,6 +10,7 @@ export default function BookingModal({ inventoryItems, onClose, onSave, error }:
   const [customerPhone, setCustomerPhone] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [securityDeposit, setSecurityDeposit] = useState(0)
   
   const [selectedItems, setSelectedItems] = useState<any[]>([])
   const [itemToAdd, setItemToAdd] = useState('')
@@ -92,8 +93,10 @@ export default function BookingModal({ inventoryItems, onClose, onSave, error }:
       customer_phone: customerPhone,
       start_date: startDate,
       end_date: endDate,
-      status: 'quote',
+      status: 'confirmed',
       total_amount: totalAmount,
+      security_deposit_amount: securityDeposit,
+      security_deposit_status: 'unpaid',
       created_at: new Date().toISOString()
     }
 
@@ -158,6 +161,18 @@ export default function BookingModal({ inventoryItems, onClose, onSave, error }:
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">End Date</label>
                 <input required type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full bg-gray-50 focus:bg-white border focus:border-blue-500 rounded-xl px-4 py-2.5 outline-none text-black font-semibold transition-colors" />
               </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-100">
+              <label className="block text-sm font-bold text-gray-900 mb-1.5">Security Deposit (₹)</label>
+              <input 
+                type="number" 
+                value={securityDeposit} 
+                onChange={e => setSecurityDeposit(Number(e.target.value))} 
+                className="w-full bg-gray-50 focus:bg-white border focus:border-blue-500 rounded-xl px-4 py-2.5 outline-none text-black font-semibold transition-colors" 
+                placeholder="Refundable deposit amount" 
+              />
+              <p className="text-xs text-gray-500 mt-1 font-medium">This is handled separately from the rental total.</p>
             </div>
 
             <div className="pt-4 border-t border-gray-100">

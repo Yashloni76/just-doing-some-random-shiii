@@ -16,18 +16,20 @@ export async function GET(request: Request) {
 
   const supabase = createClient()
   
-  // Deep join bookings -> booking_items -> inventory_items natively through PostgREST
-  const { data: booking, error }: any = await supabase
-    .from('bookings')
-    .select(`
-      *,
-      booking_items (
-        quantity_booked,
-        inventory_items ( name, price_per_day, gst_rate, hsn_code )
-      )
-    `)
-    .eq('id', bookingId)
-    .single()
+    // Deep join bookings -> businesses & booking_items -> inventory_items
+    const { data: booking, error }: any = await supabase
+      .from('bookings')
+      .select(`
+        *,
+        businesses ( * ),
+        booking_items (
+          quantity_booked,
+          returned_quantity,
+          inventory_items ( name, price_per_day, gst_rate, hsn_code )
+        )
+      `)
+      .eq('id', bookingId)
+      .single()
 
   if (error || !booking) {
     console.error("SUPABASE API ROUTE FETCH ERROR ->", error)
@@ -46,12 +48,24 @@ export async function GET(request: Request) {
 
     let y = height - 50
 
-    // Master Header (Business details via RLS link)
-    const businessName = booking.businesses?.business_name || 'Rentpe Demo Business'
+    // Master Header (Dynamic Business Details)
+    const biz = booking.businesses
+    const businessName = biz?.business_name || 'Rentpe Demo Business'
     page.drawText(businessName, { x: 50, y, size: 24, font: boldFont, color: rgb(0.1, 0.2, 0.5) })
+    
     y -= 25
-    page.drawText(`GSTIN: ${booking.businesses?.gstin || '27AAACX1234A1Z5'}`, { x: 50, y, size: 10, font: boldFont })
-    page.drawText(`City: ${booking.businesses?.city || 'Mumbai, Maharashtra'}`, { x: 50, y: y - 15, size: 10, font: timesRomanFont })
+    page.drawText(`GSTIN: ${biz?.gstin || 'N/A'}`, { x: 50, y, size: 10, font: boldFont })
+    
+    if (biz?.business_address) {
+      const addressLines = biz.business_address.split('\n')
+      addressLines.forEach((line: string) => {
+        y -= 15
+        page.drawText(line, { x: 50, y, size: 9, font: timesRomanFont })
+      })
+    } else {
+      page.drawText(`City: ${biz?.city || 'Mumbai, Maharashtra'}`, { x: 50, y: y - 15, size: 10, font: timesRomanFont })
+      y -= 15
+    }
     
     y -= 50
     page.drawText('TAX INVOICE', { x: width / 2 - 55, y, size: 16, font: boldFont })
@@ -136,7 +150,17 @@ export async function GET(request: Request) {
     page.drawText(`GRAND TOTAL: Rs. ${finalGrandTotal.toFixed(2)}`, { x: rightAlign, y, size: 13, font: boldFont, color: rgb(0.1, 0.2, 0.5) })
 
     // Footer
-    y -= 80
+    y -= 60
+    if (biz?.terms_conditions) {
+      page.drawText('Terms & Conditions:', { x: 50, y, size: 10, font: boldFont })
+      const termsLines = biz.terms_conditions.split('\n').slice(0, 5) // Cap to 5 lines for now
+      termsLines.forEach((line: string) => {
+        y -= 12
+        page.drawText(line, { x: 50, y, size: 8, font: timesRomanFont, color: rgb(0.3, 0.3, 0.3) })
+      })
+      y -= 20
+    }
+    
     page.drawText('Thank you for renting with us!', { x: 50, y, size: 10, font: boldFont })
     page.drawText('This is a computer-generated invoice and requires no physical signature.', { x: 50, y: y - 15, size: 8, font: timesRomanFont, color: rgb(0.5, 0.5, 0.5) })
 
