@@ -2,9 +2,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
-export default function CalendarGrid({ bookings, onViewBooking, statusColors }: any) {
+export default function CalendarGrid({ bookings, statusColors }: any) {
   const [currentDate, setCurrentDate] = useState(new Date())
+  const router = useRouter()
 
   const getDaysInMonth = (year: number, month: number) => {
     return new Date(year, month + 1, 0).getDate()
@@ -75,7 +77,7 @@ export default function CalendarGrid({ bookings, onViewBooking, statusColors }: 
                 {dayBookings.map((b: any) => (
                   <div 
                     key={b.id} 
-                    onClick={() => onViewBooking(b)}
+                    onClick={() => router.push(`/dashboard/bookings/${b.id}`)}
                     className={`text-[10px] p-1.5 px-2 rounded-lg font-bold truncate cursor-pointer shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all ${statusColors[b.status]}`}
                     title={`${b.customer_name} - ${b.status}`}
                   >
