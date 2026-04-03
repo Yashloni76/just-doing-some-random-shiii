@@ -6,7 +6,7 @@ export default async function SettingsPage() {
   
   const DUMMY_BUSINESS_ID = '00000000-0000-0000-0000-000000000001'
   
-  const { data: business, error } = await supabase
+  const { data: business } = await supabase
     .from('businesses')
     .select('*')
     .eq('id', DUMMY_BUSINESS_ID)

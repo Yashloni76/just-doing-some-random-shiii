@@ -4,13 +4,36 @@ import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Save, Globe, Building2, MapPin, Mail, MessageSquare, ShieldCheck, AlertCircle } from 'lucide-react'
 
-export default function SettingsDashboard({ initialBusiness }: { initialBusiness: any }) {
-  const [business, setBusiness] = useState(initialBusiness)
+interface Business {
+  id: string
+  business_name: string
+  gstin: string | null
+  slug: string | null
+  business_address: string | null
+  business_email: string | null
+  whatsapp_number: string | null
+  terms_conditions: string | null
+  logo_url: string | null
+}
+
+export default function SettingsDashboard({ initialBusiness }: { initialBusiness: Business | null }) {
+  const [business, setBusiness] = useState<Business | null>(initialBusiness)
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
+  if (!business) {
+    return (
+      <div className="bg-white p-12 rounded-2xl border border-gray-100 text-center shadow-sm">
+        <AlertCircle className="mx-auto text-red-500 mb-4" size={48} />
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Business Not Found</h2>
+        <p className="text-gray-500">We couldn&apos;t retrieve your business profile. Please contact support.</p>
+      </div>
+    )
+  }
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!business) return // Added for safety
     setIsSaving(true)
     setMessage(null)
     
